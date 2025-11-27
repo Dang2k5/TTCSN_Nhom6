@@ -1,15 +1,10 @@
-package model;
-
-import java.util.Scanner;
-import java.util.Arrays;
 import java.io.*;
 import java.util.List;
-import java.util.ArrayList;
 
 public class Main {
     public static void main(String[] args) {
         // Đọc input từ file
-        String inputFile = "input.txt";
+        String inputFile = "input2.txt";
         String outputFile = "output.txt";
 
         try {
@@ -46,7 +41,7 @@ public class Main {
                 return;
             }
 
-            // Đọc các cạnh
+            // Đọc các cạnh - đỉnh bắt đầu từ 1
             System.out.println("Đang đọc các cạnh từ file...");
             for (int i = 0; i < m; i++) {
                 line = reader.readLine();
@@ -61,7 +56,8 @@ public class Main {
                 }
                 int u = Integer.parseInt(tokens[0]);
                 int v = Integer.parseInt(tokens[1]);
-                if (u < 0 || u >= n || v < 0 || v >= n) {
+                // Kiểm tra đỉnh từ 1 đến n
+                if (u < 1 || u > n || v < 1 || v > n) {
                     System.out.println("Chỉ số đỉnh không hợp lệ: " + u + " " + v + " (bỏ qua cạnh này)");
                     continue;
                 }
@@ -123,38 +119,60 @@ public class Main {
             System.out.println("\nBắt đầu chạy Genetic Algorithm...");
             Individual best = ga.run();
 
+
+            // Lấy toàn bộ population sau khi chạy xong GA
+            List<Individual> finalPop = ga.getPopulation();
+
+
+            int maxFitness = 0;
+            for (Individual ind : finalPop) {
+                if (ind.getFitness() > maxFitness) {
+                    maxFitness = ind.getFitness();
+                }
+            }
+
             // --- Ghi kết quả ra file ---
             BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile, true));
 
-            writer.write("==== KẾT QUẢ TỐI ƯU ====\n");
+            writer.write("\n" + "=".repeat(50) + "\n");
+            writer.write("=".repeat(50) + "\n\n");
+
             writer.write("Độ thích nghi: " + best.getFitness() + "\n");
 
-            // Ghi danh sách đỉnh có gene = 1
-            writer.write("Đỉnh có trong tập (index): ");
-            for (int i = 0; i < best.getGenes().length(); i++) {
+            // Ghi danh sách đỉnh có gene = 1 - SỬA: đúng cách xử lý BitSet từ 1 đến n
+            writer.write("Đỉnh có trong tập: ");
+            int count = 0;
+            for (int i = 1; i <= g.size(); i++) { // SỬA: từ 1 đến n
                 if (best.getGenes().get(i)) {
-                    writer.write(i + " ");
+                    writer.write(i + " "); // SỬA: ghi trực tiếp i (đã là đỉnh từ 1)
+                    count++;
                 }
             }
             writer.write("\n");
+            writer.write("Tổng số đỉnh được chọn: " + count + "/" + g.size() + "\n");
 
-            // Ghi thông tin genes
+            // Ghi thông tin genes - SỬA: từ 1 đến n
             writer.write("Genes: ");
-            for (int i = 0; i < best.getGenes().length(); i++) {
-                writer.write(best.getGenes().get(i) ? "1 " : "0 ");
+            for (int i = 1; i <= g.size(); i++) { // SỬA: từ 1 đến n
+                writer.write(best.getGenes().get(i) ? "1" : "0");
+                if (i < g.size()) writer.write(" ");
             }
             writer.write("\n");
-
             writer.close();
 
             // --- In kết quả ra console ---
             System.out.println("\n==== KẾT QUẢ TỐI ƯU ====");
             System.out.println("Độ thích nghi: " + best.getFitness());
-            System.out.print("Đỉnh có trong tập (index): ");
-            for (int i = 0; i < best.getGenes().length(); i++) {
-                if (best.getGenes().get(i)) System.out.print(i + " ");
+            System.out.print("Đỉnh có trong tập: ");
+            count = 0;
+            for (int i = 1; i <= g.size(); i++) { // SỬA: từ 1 đến n
+                if (best.getGenes().get(i)) {
+                    System.out.print(i + " "); // SỬA: ghi trực tiếp i
+                    count++;
+                }
             }
             System.out.println();
+            System.out.println("Tổng số đỉnh được chọn: " + count + "/" + g.size());
             System.out.println("Kết quả đã được ghi vào file: " + outputFile);
 
         } catch (IOException e) {

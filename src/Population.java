@@ -1,5 +1,3 @@
-package model;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,6 +15,7 @@ public class Population {
         }
         sortByFitness();
     }
+
 
     public void sortByFitness() {
         individuals.sort((a, b) -> b.getFitness() - a.getFitness());
