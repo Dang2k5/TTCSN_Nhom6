@@ -3,6 +3,7 @@ import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
+
         // Đọc input từ file
         String inputFile = "input2.txt";
         String outputFile = "output.txt";
@@ -119,61 +120,92 @@ public class Main {
             System.out.println("\nBắt đầu chạy Genetic Algorithm...");
             Individual best = ga.run();
 
-
-            // Lấy toàn bộ population sau khi chạy xong GA
-            List<Individual> finalPop = ga.getPopulation();
-
-
-            int maxFitness = 0;
-            for (Individual ind : finalPop) {
-                if (ind.getFitness() > maxFitness) {
-                    maxFitness = ind.getFitness();
-                }
-            }
-
             // --- Ghi kết quả ra file ---
             BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile, true));
 
-            writer.write("\n" + "=".repeat(50) + "\n");
-            writer.write("=".repeat(50) + "\n\n");
+            writer.write("\n" + "=".repeat(60) + "\n");
+            writer.write("KẾT QUẢ TỐI ƯU - " + java.time.LocalDateTime.now().toString() + "\n");
+            writer.write("=".repeat(60) + "\n\n");
 
             writer.write("Độ thích nghi: " + best.getFitness() + "\n");
 
-            // Ghi danh sách đỉnh có gene = 1 - SỬA: đúng cách xử lý BitSet từ 1 đến n
+            // Ghi danh sách đỉnh có gene = 1
             writer.write("Đỉnh có trong tập: ");
             int count = 0;
-            for (int i = 1; i <= g.size(); i++) { // SỬA: từ 1 đến n
+            for (int i = 1; i <= g.size(); i++) {
                 if (best.getGenes().get(i)) {
-                    writer.write(i + " "); // SỬA: ghi trực tiếp i (đã là đỉnh từ 1)
+                    writer.write(i + " ");
                     count++;
                 }
             }
             writer.write("\n");
             writer.write("Tổng số đỉnh được chọn: " + count + "/" + g.size() + "\n");
 
-            // Ghi thông tin genes - SỬA: từ 1 đến n
+            // Ghi thông tin genes
             writer.write("Genes: ");
-            for (int i = 1; i <= g.size(); i++) { // SỬA: từ 1 đến n
+            for (int i = 1; i <= g.size(); i++) {
                 writer.write(best.getGenes().get(i) ? "1" : "0");
                 if (i < g.size()) writer.write(" ");
             }
             writer.write("\n");
+
+            // === THÊM PHẦN NÀY: GHI KẾT QUẢ THỰC NGHIỆM CHI TIẾT ===
+            writer.write("\n" + "=".repeat(50) + "\n");
+            writer.write("KẾT QUẢ THỰC NGHIỆM CHI TIẾT\n");
+            writer.write("=".repeat(50) + "\n");
+            
+            writer.write("Thời gian thực thi: " + String.format("%.3f", ga.getExecutionTime()) + " giây\n");
+            writer.write("Số thế hệ thực tế: " + ga.getActualGenerations() + "/" + maxGenerations + "\n");
+            writer.write("Độ đa dạng cuối: " + String.format("%.4f", ga.getFinalDiversity()) + "\n");
+            writer.write("Dừng sớm: " + (ga.isEarlyStopped() ? "CÓ" : "KHÔNG") + "\n");
+            writer.write("Lý do dừng: " + ga.getStopReason() + "\n");
+            writer.write("Kích thước clique tìm được: " + best.getFitness() + "\n");
+            
+            // Thông tin về đồ thị
+            writer.write("\nTHÔNG TIN ĐỒ THỊ:\n");
+            writer.write("Số đỉnh: " + g.size() + "\n");
+            writer.write("Số cạnh: " + m + "\n");
+            
+            // Thông số GA đã sử dụng
+            writer.write("\nTHAM SỐ GA ĐÃ SỬ DỤNG:\n");
+            writer.write("Kích thước quần thể: " + popSize + "\n");
+            writer.write("Số thế hệ tối đa: " + maxGenerations + "\n");
+            writer.write("Tỷ lệ đột biến: " + mutationRate + "\n");
+            writer.write("Tỷ lệ lai ghép: " + crossoverRate + "\n");
+            writer.write("Số cá thể ưu tú: " + eliteCount + "\n");
+            writer.write("Ngưỡng kiên nhẫn: " + patience + "\n");
+            writer.write("Ngưỡng đa dạng: " + diversityThreshold + "\n");
+
             writer.close();
 
             // --- In kết quả ra console ---
-            System.out.println("\n==== KẾT QUẢ TỐI ƯU ====");
+            System.out.println("\n" + "=".repeat(50));
+            System.out.println("KẾT QUẢ TỐI ƯU");
+            System.out.println("=".repeat(50));
             System.out.println("Độ thích nghi: " + best.getFitness());
             System.out.print("Đỉnh có trong tập: ");
             count = 0;
-            for (int i = 1; i <= g.size(); i++) { // SỬA: từ 1 đến n
+            for (int i = 1; i <= g.size(); i++) {
                 if (best.getGenes().get(i)) {
-                    System.out.print(i + " "); // SỬA: ghi trực tiếp i
+                    System.out.print(i + " ");
                     count++;
                 }
             }
             System.out.println();
             System.out.println("Tổng số đỉnh được chọn: " + count + "/" + g.size());
-            System.out.println("Kết quả đã được ghi vào file: " + outputFile);
+            
+            // In thông tin thực nghiệm ra console
+            System.out.println("\n" + "=".repeat(50));
+            System.out.println("THÔNG TIN THỰC NGHIỆM");
+            System.out.println("=".repeat(50));
+            System.out.println("Thời gian thực thi: " + String.format("%.3f", ga.getExecutionTime()) + " giây");
+            System.out.println("Số thế hệ thực tế: " + ga.getActualGenerations() + "/" + maxGenerations);
+            System.out.println("Độ đa dạng cuối: " + String.format("%.4f", ga.getFinalDiversity()));
+            System.out.println("Dừng sớm: " + (ga.isEarlyStopped() ? "CÓ" : "KHÔNG"));
+            System.out.println("Lý do dừng: " + ga.getStopReason());
+            System.out.println("Kích thước clique: " + best.getFitness());
+            
+            System.out.println("\nKết quả đã được ghi vào file: " + outputFile);
 
         } catch (IOException e) {
             System.out.println("Lỗi đọc/ghi file: " + e.getMessage());

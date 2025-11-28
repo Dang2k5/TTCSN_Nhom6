@@ -14,6 +14,13 @@ public class GeneticAlgorithm {
     private final double diversityThreshold;
     private final Random rand = new Random();
     private Population population;
+    
+    // === THÊM CÁC TRƯỜNG MỚI ĐỂ THEO DÕI ===
+    private long startTime;
+    private int actualGenerations;
+    private double finalDiversity;
+    private boolean earlyStopped;
+    private String stopReason;
 
     public GeneticAlgorithm(Graph graph, int populationSize, int maxGenerations, double mutationRate, double crossoverRate
             , int eliteCount, int patience, double diversityThreshold) {
@@ -25,12 +32,19 @@ public class GeneticAlgorithm {
         this.eliteCount = eliteCount;
         this.patience = Math.max(0, patience);
         this.diversityThreshold = Math.max(diversityThreshold, 0.0);
+        
+        // Khởi tạo các biến theo dõi
+        this.earlyStopped = false;
+        this.stopReason = "Đạt số thế hệ tối đa";
+        this.actualGenerations = 0;
     }
 
-
     public Individual run() {
+        // Bắt đầu đo thời gian
+        startTime = System.currentTimeMillis();
+        
         // Khởi tạo quần thể ban đầu
-        Population population = new Population(graph, populationSize);
+        population = new Population(graph, populationSize);
         population.sortByFitness();
 
         // best toàn cục
@@ -41,6 +55,8 @@ public class GeneticAlgorithm {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter("output.txt"))) {
 
             for (int gen = 0; gen < maxGenerations; gen++) {
+                actualGenerations = gen + 1;  // Ghi nhận số thế hệ thực tế
+                
                 List<Individual> newIndividuals = new ArrayList<>();
 
                 // 1. Giữ lại elite
@@ -88,30 +104,35 @@ public class GeneticAlgorithm {
                 double diversity = computeDiversity(population);
 
                 // 6. Ghi log thế hệ hiện tại
-                logGeneration(bw, gen, population, noImprovementCounter);
+                logGeneration(bw, gen, population, noImprovementCounter, diversity);
 
                 // 7. Điều kiện dừng sớm
                 boolean stopByPatience = (patience > 0 && noImprovementCounter >= patience);
                 boolean stopByDiversity = (diversityThreshold > 0 && diversity < diversityThreshold);
 
                 if (stopByPatience || stopByDiversity) {
+                    earlyStopped = true;
                     if (stopByPatience) {
+                        stopReason = "Không cải thiện sau " + patience + " thế hệ liên tiếp";
                         System.out.println(
-                                "Dừng sớm tại thế hệ " + gen +
-                                        " vì không cải thiện trong " + patience + " thế hệ liên tiếp."
+                                "Dừng sớm tại thế hệ " + actualGenerations +
+                                        " - " + stopReason
                         );
                     }
                     if (stopByDiversity) {
+                        stopReason = "Độ đa dạng quá thấp (" + String.format("%.4f", diversity) + ") < ngưỡng (" + diversityThreshold + ")";
                         System.out.println(
-                                "Dừng sớm tại thế hệ " + gen +
-                                        " vì độ đa dạng quần thể (" +
-                                        String.format("%.4f", diversity) +
-                                        ") < ngưỡng (" + diversityThreshold + ")"
+                                "Dừng sớm tại thế hệ " + actualGenerations +
+                                        " - " + stopReason
                         );
                     }
                     break; // THOÁT KHỎI FOR, KHÔNG CHẠY THÊM THẾ HỆ NÀO NỮA
                 }
             }
+            
+            // Ghi nhận độ đa dạng cuối cùng
+            finalDiversity = computeDiversity(population);
+            
         } catch (Exception e) {
             System.err.println("Lỗi trong quá trình chạy thuật toán hoặc ghi log: " + e.getMessage());
             e.printStackTrace();
@@ -120,6 +141,26 @@ public class GeneticAlgorithm {
         return globalBest;
     }
 
+    // === THÊM CÁC PHƯƠNG THỨC GETTER ĐỂ LẤY THÔNG TIN THỰC NGHIỆM ===
+    public double getExecutionTime() {
+        return (System.currentTimeMillis() - startTime) / 1000.0;
+    }
+    
+    public int getActualGenerations() {
+        return actualGenerations;
+    }
+    
+    public double getFinalDiversity() {
+        return finalDiversity;
+    }
+    
+    public boolean isEarlyStopped() {
+        return earlyStopped;
+    }
+    
+    public String getStopReason() {
+        return stopReason;
+    }
 
     private Individual tournamentSelection(Population population) {
         int tournamentSize = 3;
@@ -132,6 +173,7 @@ public class GeneticAlgorithm {
         }
         return best;
     }
+    
     private void printPopulation(Population population) {
         int idx = 0;
         for (Individual ind : population.getIndividuals()) {
@@ -150,23 +192,23 @@ public class GeneticAlgorithm {
         return (double) unique.size() / (double) pop.getIndividuals().size();
     }
 
-
     private void logGeneration(BufferedWriter bw,
                                int generation,
                                Population population,
-                               int noImprovementCounter) {
+                               int noImprovementCounter,
+                               double diversity) {
         try {
             String lineSep = System.lineSeparator();
             StringBuilder sb = new StringBuilder();
 
-            sb.append("===== GENERATION ").append(generation).append(" =====").append(lineSep)
+            sb.append("===== GENERATION ").append(generation + 1).append(" =====").append(lineSep)
                     .append(lineSep);
 
             sb.append("Population Details:").append(lineSep);
             int index = 0;
             for (Individual ind : population.getIndividuals()) {
                 sb.append("[").append(index).append("] ")
-                        .append(ind.toString())   // ind đã override toString()
+                        .append(ind.toString())
                         .append(lineSep);
                 index++;
             }
@@ -176,7 +218,7 @@ public class GeneticAlgorithm {
                     .append(lineSep);
 
             sb.append("Population Diversity: ")
-                    .append(String.format("%.4f", computeDiversity(population)))
+                    .append(String.format("%.4f", diversity))
                     .append(lineSep);
 
             sb.append("Số thế hệ liên tiếp không cải thiện: ")
@@ -190,7 +232,7 @@ public class GeneticAlgorithm {
             bw.write(sb.toString());
             bw.flush();
 
-            System.out.println("Đã ghi Generation " + generation + " vào file output.txt");
+            System.out.println("Đã ghi Generation " + (generation + 1) + " vào file output.txt");
 
         } catch (Exception e) {
             System.err.println("Lỗi ghi log generation " + generation + ": " + e.getMessage());
@@ -202,7 +244,6 @@ public class GeneticAlgorithm {
         if (this.population == null || this.population.getIndividuals() == null) {
             return new ArrayList<>();
         }
-        // trả về shallow copy của list; individual object vẫn là cùng reference
         return new ArrayList<>(this.population.getIndividuals());
     }
 }
