@@ -3,6 +3,9 @@ public class Graph {
     private final boolean[][] adj;
 
     public Graph(int n) {
+        if(n <= 0) {
+                throw new IllegalArgumentException("Number of vertices must be positive.");
+            }
         this.n = n;
         // Tạo ma trận kề với kích thước n+1 để đỉnh chạy từ 1 đến n
         this.adj = new boolean[n + 1][n + 1];
@@ -27,4 +30,5 @@ public class Graph {
         }
         return adj[u][v];
     }
+
 }

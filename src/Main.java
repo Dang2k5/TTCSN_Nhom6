@@ -1,16 +1,16 @@
-import java.io.*;
-import java.util.ArrayList;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.List;
 
 public class Main {
-    public static void main(String[] args) {
+    static void main(String[] args) {
 
-        String inputFile  = "input2.txt";
-        String outputFile = "output.txt";
+        String inputFile = "input10.txt";
 
         try (BufferedReader reader = new BufferedReader(new FileReader(inputFile))) {
 
-            // ===== ĐỌC GRAPH =====
+            // ================== ĐỌC GRAPH ==================
             String line = reader.readLine();
             if (line == null) {
                 System.out.println("File input không có dữ liệu");
@@ -55,9 +55,10 @@ public class Main {
                 int v = Integer.parseInt(tokens[1]);
 
                 if (u < 1 || u > n || v < 1 || v > n) {
-                    System.out.println("Chỉ số đỉnh không hợp lệ: " + u + " " + v + " (bỏ qua)");
+                    System.out.println("Cạnh " + u + " " + v + " nằm ngoài phạm vi 1.." + n + " (bỏ qua)");
                     continue;
                 }
+
                 if (u == v) {
                     System.out.println("Bỏ qua self-loop: " + u + " " + v);
                     continue;
@@ -66,199 +67,136 @@ public class Main {
                 g.addEdge(u, v);
             }
 
-            // ===== ĐỌC THAM SỐ GA =====
-            int popSize = 20;
-            int maxGenerations = 50;
-            double mutationRate = 0.05;
+            // ================== ĐỌC THAM SỐ GA (NẾU CÓ) ==================
+            int popSize          = 20;
+            int maxGenerations   = 50;
+            double mutationRate  = 0.05;
             double crossoverRate = 0.7;
-            int eliteCount = 2;
-            int patience = 0;
+            int eliteCount       = 2;
+            int patience         = 0;
             double diversityThreshold = 0.0;
+            double indexMin      = 0.0; // ngưỡng chỉ mục tối thiểu
+            double indexMax      = 1.0; // ngưỡng chỉ mục tối đa
 
             try {
+                // Dòng tiếp theo: kích thước quần thể
                 line = reader.readLine();
-                if (line != null) popSize = Integer.parseInt(line.trim());
+                if (line != null && !line.trim().isEmpty()) {
+                    popSize = Integer.parseInt(line.trim());
+                }
 
+                // Dòng tiếp theo: số thế hệ tối đa
                 line = reader.readLine();
-                if (line != null) maxGenerations = Integer.parseInt(line.trim());
+                if (line != null && !line.trim().isEmpty()) {
+                    maxGenerations = Integer.parseInt(line.trim());
+                }
 
+                // Dòng tiếp theo: tỷ lệ đột biến
                 line = reader.readLine();
-                if (line != null) mutationRate = Double.parseDouble(line.trim());
+                if (line != null && !line.trim().isEmpty()) {
+                    mutationRate = Double.parseDouble(line.trim());
+                }
 
+                // Dòng tiếp theo: tỷ lệ lai ghép
                 line = reader.readLine();
-                if (line != null) crossoverRate = Double.parseDouble(line.trim());
+                if (line != null && !line.trim().isEmpty()) {
+                    crossoverRate = Double.parseDouble(line.trim());
+                }
 
+                // Dòng tiếp theo: số cá thể ưu tú
                 line = reader.readLine();
-                if (line != null) eliteCount = Integer.parseInt(line.trim());
+                if (line != null && !line.trim().isEmpty()) {
+                    eliteCount = Integer.parseInt(line.trim());
+                }
 
+                // Dòng tiếp theo: ngưỡng kiên nhẫn (patience)
                 line = reader.readLine();
-                if (line != null) patience = Integer.parseInt(line.trim());
+                if (line != null && !line.trim().isEmpty()) {
+                    patience = Integer.parseInt(line.trim());
+                }
 
+                // Dòng tiếp theo: ngưỡng đa dạng
                 line = reader.readLine();
-                if (line != null) diversityThreshold = Double.parseDouble(line.trim());
+                if (line != null && !line.trim().isEmpty()) {
+                    diversityThreshold = Double.parseDouble(line.trim());
+                }
+
             } catch (NumberFormatException e) {
-                System.out.println("Lỗi định dạng tham số GA, sử dụng giá trị mặc định");
+                System.out.println("Lỗi định dạng tham số GA trong file, sẽ dùng giá trị mặc định.");
             }
 
-            // =========================================================
-            // BENCHMARK 10 RUNS -> CHỌN RUN TỐT NHẤT + VẼ BIỂU ĐỒ
-            // =========================================================
-            int runCount = 10;
+            // ================== TẠO GA VÀ CHẠY 1 LẦN ==================
+            GeneticAlgorithm ga = new GeneticAlgorithm(
+                    g,
+                    popSize,
+                    maxGenerations,
+                    mutationRate,
+                    crossoverRate,
+                    eliteCount,
+                    patience,
+                    diversityThreshold,
+                    indexMin,
+                    indexMax
+            );
 
-            List<Integer> runIdx   = new ArrayList<>();
-            List<Double>  runTimes = new ArrayList<>();
+            ga.setEnableLogging(true);      // nếu muốn xem log chi tiết trong GA
 
-            Individual bestOverall = null;
-            int bestRunIndex = -1;
-            int bestFitness = Integer.MIN_VALUE;
+            System.out.println("\n=== CHẠY CHƯƠNG TRÌNH ===");
+            Individual best = ga.run();
+            double execTime = ga.getExecutionTime();
 
-            double bestExecTime = Double.MAX_VALUE;
-            int bestActualGenerations = 0;
-            double bestFinalDiversity = 0.0;
-            boolean bestEarlyStopped = false;
-            String bestStopReason = "";
+            int actualGenerations = ga.getActualGenerations();
+            double finalDiversity = ga.getFinalDiversity();
+            boolean earlyStopped  = ga.isEarlyStopped();
+            String stopReason     = ga.getStopReason();
 
-            List<Integer> bestGenHistory = null;
-            List<Integer> bestFitnessHistory = null;
+            // ================== VẼ BIỂU ĐỒ FITNESS THEO THẾ HỆ ==================
+            List<Integer> genHistory      = ga.getGenHistory();
+            List<Integer> bestFitnessHist = ga.getBestFitnessHistory();
 
-            System.out.println("\n=== BENCHMARK: chạy " + runCount + " lần, chọn run tốt nhất ===");
-
-            for (int run = 1; run <= runCount; run++) {
-                GeneticAlgorithm gaBench = new GeneticAlgorithm(
-                        g, popSize, maxGenerations, mutationRate, crossoverRate,
-                        eliteCount, patience, diversityThreshold
-                );
-
-                // tắt log + tắt auto-draw trong GA để tránh spam cửa sổ/ghi file
-                gaBench.setEnableLogging(false);
-                gaBench.setDrawFitnessChart(false);
-
-                Individual bestThisRun = gaBench.run();
-                double timeSec = gaBench.getExecutionTime();
-
-                runIdx.add(run);
-                runTimes.add(timeSec);
-
-                System.out.println("Run " + run + " | time=" + String.format("%.4f", timeSec) +
-                        "s | bestFitness=" + bestThisRun.getFitness());
-
-                // Chọn best: fitness cao nhất; nếu hòa => time nhỏ hơn
-                if (bestThisRun.getFitness() > bestFitness ||
-                        (bestThisRun.getFitness() == bestFitness && timeSec < bestExecTime)) {
-
-                    bestFitness = bestThisRun.getFitness();
-                    bestRunIndex = run;
-
-                    bestOverall = bestThisRun.cloneIndividual();
-
-                    bestExecTime = timeSec;
-                    bestActualGenerations = gaBench.getActualGenerations();
-                    bestFinalDiversity = gaBench.getFinalDiversity();
-                    bestEarlyStopped = gaBench.isEarlyStopped();
-                    bestStopReason = gaBench.getStopReason();
-
-                    bestGenHistory = gaBench.getGenHistory();
-                    bestFitnessHistory = gaBench.getBestFitnessHistory();
-                }
+            List<Integer> genTimeMsHist   = ga.getGenTimeMsHistory();
+            if (!genHistory.isEmpty()) {
+                FitnessLineChart.show(genHistory, bestFitnessHist);
+                FitnessLineChart.savePng(genHistory, bestFitnessHist, "fitness_by_generation.png");
+                System.out.println("Đã lưu biểu đồ fitness_by_generation.png");
+            } else {
+                System.out.println("Không có dữ liệu lịch sử fitness để vẽ biểu đồ.");
+            }
+            // ================== VẼ BIỂU ĐỒ THỜI GIAN THEO THẾ HỆ ==================
+            if (!genTimeMsHist.isEmpty() && genTimeMsHist.size() == genHistory.size()) {
+                TimeLineChart.show(genHistory, genTimeMsHist);
+                TimeLineChart.savePng(genHistory, genTimeMsHist, "time_by_generation.png");
+                System.out.println("Đã lưu biểu đồ time_by_generation.png");
+            } else if (!genTimeMsHist.isEmpty()) {
+                System.out.println("Không vẽ được biểu đồ thời gian vì số điểm dữ liệu không khớp (genHistory="
+                        + genHistory.size() + ", genTimeMsHist=" + genTimeMsHist.size() + ").");
+            } else {
+                System.out.println("Không có dữ liệu lịch sử thời gian theo thế hệ để vẽ biểu đồ.");
             }
 
-            // ===== VẼ runtime theo run (10 điểm) =====
-            RunTimeLineChart.show(runIdx, runTimes);
-            RunTimeLineChart.savePng(runIdx, runTimes, "runtime_by_run.png");
-            System.out.println("Đã lưu biểu đồ runtime: runtime_by_run.png");
 
-            // ===== VẼ fitness theo generation của BEST RUN =====
-            if (bestGenHistory != null && bestFitnessHistory != null && !bestGenHistory.isEmpty()) {
-                FitnessLineChart.show(bestGenHistory, bestFitnessHistory);
-                FitnessLineChart.savePng(bestGenHistory, bestFitnessHistory, "best_run_fitness_by_generation.png");
-                System.out.println("Đã lưu biểu đồ fitness best run: best_run_fitness_by_generation.png");
-            }
 
-            // =========================================================
-            // IN RA KẾT QUẢ CỦA BEST RUN (KHÔNG CHẠY RUN CHÍNH)
-            // =========================================================
-            if (bestOverall == null) {
-                System.out.println("Không tìm được bestOverall (lỗi).");
-                return;
-            }
+            // ================== IN KẾT QUẢ RA MÀN HÌNH ==================
 
-            // ===== IN RA CONSOLE =====
-            System.out.println("\n" + "=".repeat(70));
-            System.out.println("KẾT QUẢ BEST RUN #" + bestRunIndex + "/" + runCount);
-            System.out.println("=".repeat(70));
-            System.out.println("Best Fitness: " + bestOverall.getFitness());
-            System.out.println("Time (sec): " + String.format("%.4f", bestExecTime));
-            System.out.println("Actual Generations: " + bestActualGenerations + "/" + maxGenerations);
-            System.out.println("Final Diversity: " + String.format("%.4f", bestFinalDiversity));
-            System.out.println("Early Stopped: " + (bestEarlyStopped ? "CÓ" : "KHÔNG"));
-            System.out.println("Stop Reason: " + bestStopReason);
+            System.out.println("\n=== Tham số GA ===");
+            System.out.println("Kích thước quần thể: " + popSize);
+            System.out.println("Số thế hệ tối đa: " + maxGenerations);
+            System.out.println("Tỷ lệ đột biến: " + mutationRate);
+            System.out.println("Tỷ lệ lai ghép: " + crossoverRate);
+            System.out.println("Số cá thể ưu tú: " + eliteCount);
+            System.out.println("Ngưỡng kiên nhẫn: " + patience);
+            System.out.println("Ngưỡng đa dạng: " + diversityThreshold);
 
-            System.out.print("\nĐỉnh có trong tập: ");
-            int count = 0;
-            for (int i = 1; i <= g.size(); i++) {
-                if (bestOverall.getGenes().get(i)) {
-                    System.out.print(i + " ");
-                    count++;
-                }
-            }
-            System.out.println();
-            System.out.println("Tổng số đỉnh được chọn: " + count + "/" + g.size());
-
-            System.out.print("Genes: ");
-            for (int i = 1; i <= g.size(); i++) {
-                System.out.print(bestOverall.getGenes().get(i) ? "1" : "0");
-                if (i < g.size()) System.out.print(" ");
-            }
-            System.out.println();
-
-            // ===== GHI RA output.txt (CHỈ BEST RUN) =====
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile, true))) {
-                writer.write("\n" + "=".repeat(70) + "\n");
-                writer.write("BEST RUN #" + bestRunIndex + "/" + runCount + " - " + java.time.LocalDateTime.now() + "\n");
-                writer.write("=".repeat(70) + "\n\n");
-
-                writer.write("Best Fitness: " + bestOverall.getFitness() + "\n");
-                writer.write("Time (sec): " + String.format("%.4f", bestExecTime) + "\n");
-                writer.write("Actual Generations: " + bestActualGenerations + "/" + maxGenerations + "\n");
-                writer.write("Final Diversity: " + String.format("%.4f", bestFinalDiversity) + "\n");
-                writer.write("Early Stopped: " + (bestEarlyStopped ? "CÓ" : "KHÔNG") + "\n");
-                writer.write("Stop Reason: " + bestStopReason + "\n");
-
-                writer.write("\nĐỉnh có trong tập: ");
-                count = 0;
-                for (int i = 1; i <= g.size(); i++) {
-                    if (bestOverall.getGenes().get(i)) {
-                        writer.write(i + " ");
-                        count++;
-                    }
-                }
-                writer.write("\nTổng số đỉnh được chọn: " + count + "/" + g.size() + "\n");
-
-                writer.write("Genes: ");
-                for (int i = 1; i <= g.size(); i++) {
-                    writer.write(bestOverall.getGenes().get(i) ? "1" : "0");
-                    if (i < g.size()) writer.write(" ");
-                }
-                writer.write("\n");
-
-                writer.write("\nTHÔNG TIN ĐỒ THỊ:\n");
-                writer.write("Số đỉnh: " + g.size() + "\n");
-                writer.write("Số cạnh: " + m + "\n");
-
-                writer.write("\nTHAM SỐ GA ĐÃ SỬ DỤNG:\n");
-                writer.write("Kích thước quần thể: " + popSize + "\n");
-                writer.write("Số thế hệ tối đa: " + maxGenerations + "\n");
-                writer.write("Tỷ lệ đột biến: " + mutationRate + "\n");
-                writer.write("Tỷ lệ lai ghép: " + crossoverRate + "\n");
-                writer.write("Số cá thể ưu tú: " + eliteCount + "\n");
-                writer.write("Ngưỡng kiên nhẫn: " + patience + "\n");
-                writer.write("Ngưỡng đa dạng: " + diversityThreshold + "\n");
-            }
-
-            System.out.println("\nĐã ghi output chỉ BEST RUN vào file: " + outputFile);
+            System.out.println("\n=== Kết quả ===");
+            System.out.println("Best fitness: " + best.getFitness());
+            System.out.println("Thời gian thực thi: " + String.format("%.4f", execTime) + " s");
+            System.out.println("Số thế hệ thực tế: " + actualGenerations);
+            System.out.println("Độ đa dạng cuối cùng: " + String.format("%.4f", finalDiversity));
+            System.out.println("Dừng sớm?: " + earlyStopped);
+            System.out.println("Lý do dừng: " + stopReason);
 
         } catch (IOException e) {
-            System.out.println("Lỗi đọc/ghi file: " + e.getMessage());
+            System.out.println("Lỗi đọc file input: " + e.getMessage());
             e.printStackTrace();
         }
     }
